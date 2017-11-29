@@ -2,7 +2,7 @@ region: us-east-1
 
 function_name: scraper_arbiter
 handler: service.handler
-description: My first lambda function
+description: pulls threads for scrapers to process
 runtime: python3.6
 role: lambda_basic_execution
 timeout: 15

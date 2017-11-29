@@ -28,7 +28,7 @@ class Chan():
         self.board = board
         self.thread_path = thread_path
 
-    def get_thread(self, id):
+    def _get_thread(self, id):
         """get thread data"""
         url = '{}/{}/{}/{}.json'.format(self.base, self.board, self.thread_path, id)
         return _request(url)
@@ -39,6 +39,36 @@ class Chan():
         url = '{}/{}/threads.json'.format(self.base, self.board)
         return _request(url)
 
+    def threads_to_update(self, threads):
+        """compute which threads need to update,
+        given an existing set of threads"""
+        thread_meta_pages = self.query_threads()
+        thread_meta = chain.from_iterable([p['threads'] for p in thread_meta_pages])
+        to_update = []
+        for meta in thread_meta:
+            id = meta['no']
+            last_modified = meta['last_modified']
+
+            # str because keys become strings in json
+            if str(id) not in threads:
+                to_update.append((id, last_modified))
+            else:
+                thread = threads[str(id)]
+                if 'last_modified' not in thread or last_modified > thread['last_modified']:
+                    to_update.append((id, last_modified))
+        return to_update
+
+
+    def get_thread(self, id):
+        """fetch thread details"""
+        thread = self._get_thread(id)
+        if thread is None:
+            return str(id), None
+        return str(id), {
+            'posts': thread['posts'],
+            'last_modified': datetime.utcnow().timestamp()
+        }
+
 
 def four(board):
     return Chan('https://api.4chan.org', 'thread', board)
@@ -46,34 +76,3 @@ def four(board):
 
 def eight(board):
     return Chan('https://8ch.net', 'res', board)
-
-
-def threads_to_update(chan, threads):
-    """compute which threads need to update,
-    given an existing set of threads and a Chan"""
-    thread_meta_pages = chan.query_threads()
-    thread_meta = chain.from_iterable([p['threads'] for p in thread_meta_pages])
-    to_update = []
-    for meta in thread_meta:
-        id = meta['no']
-        last_modified = meta['last_modified']
-
-        # str because keys become strings in json
-        if str(id) not in threads:
-            to_update.append((id, last_modified))
-        else:
-            thread = threads[str(id)]
-            if 'last_modified' not in thread or last_modified > thread['last_modified']:
-                to_update.append((id, last_modified))
-    return to_update
-
-
-def get_thread(chan, id):
-    """fetch thread details"""
-    thread = chan.get_thread(id)
-    if thread is None:
-        return str(id), None
-    return str(id), {
-        'posts': thread['posts'],
-        'last_modified': datetime.utcnow().timestamp()
-    }

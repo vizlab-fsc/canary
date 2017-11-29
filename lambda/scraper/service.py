@@ -7,4 +7,4 @@ def handler(event, context):
 
     if domain == 'chan:pol':
         pol = chan.four('pol')
-        return chan.get_thread(pol, id)
+        return pol.get_thread(id)
