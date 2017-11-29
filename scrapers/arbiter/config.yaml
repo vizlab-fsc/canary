@@ -1,0 +1,15 @@
+region: us-east-1
+
+function_name: scraper_arbiter
+handler: service.handler
+description: My first lambda function
+runtime: python3.6
+role: lambda_basic_execution
+timeout: 15
+memory_size: 128
+
+environment_variables:
+    sns_arn: arn:aws:sns:us-east-1:109671671046:scrape
+
+build:
+  source_directories: lib
