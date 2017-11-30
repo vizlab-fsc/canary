@@ -9,7 +9,7 @@ def handler(event, context):
     arn = os.environ['sns_arn']
 
     # TODO might be better not to hardcode these
-    sites = [chan.four('pol')]
+    sites = [chan.FourChan('pol')]
     for site in sites:
         # TODO should we have some way of
         # identifying threads we've already seen

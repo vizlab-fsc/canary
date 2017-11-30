@@ -47,3 +47,36 @@ logger.setLevel(logging.INFO)
 - Select your function as the "Target"
 
 - [Reference](http://docs.aws.amazon.com/AmazonCloudWatch/latest/events/RunLambdaSchedule.html)
+
+## Schema
+
+`Image`: represents an image
+- `id`: int
+- `url`: string (Source URL of the image)
+- `key`: string (S3 bucket key)
+- `hash`: string (perceptual hash of the original image)
+- `created_at`: datetime (when this record was created)
+- `tags`: many `Tags`
+- `usages`: many `ImageUsages`
+
+`ImageUsage`: represent a specific usage of an image
+- `id`: int
+- `src`: `Source`
+- `url`: string (URL of the image usage, i.e. page it appeared on)
+- `timestamp`: datetime (timestamp of the comment/tweet/etc)
+- `created_at`: datetime (when this record was created)
+- `context`: string (HTML/text/markdown context, e.g. comment/tweet/etc associated with the image)
+- `image`: `Image`
+- `lid`: string ("local id", the source-specific ID, e.g. tweet ID for Twitter)
+
+If someone edits a comment, do we consider it a new usage? Do we revise the existing record?
+
+`Tag`:
+- `id`: int
+- `name`: string
+- `images`: many `Images`
+
+`Source`:
+- `id`: int
+- `name`: string
+- `usages`: many `ImageUsages`

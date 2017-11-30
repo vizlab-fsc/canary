@@ -1,0 +1,13 @@
+region: us-east-1
+
+function_name: parser
+handler: service.handler
+description: post parser
+runtime: python3.6
+role: lambda_basic_execution
+memory_size: 128
+timeout: 15
+
+build:
+  source_directories: lib
+

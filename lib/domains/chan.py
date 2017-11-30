@@ -6,7 +6,6 @@ reference <https://github.com/4chan/4chan-API/blob/master/README.md>
 import logging
 import requests
 from itertools import chain
-from datetime import datetime
 from json import JSONDecodeError
 from lib import config
 
@@ -23,10 +22,16 @@ def _request(url):
 
 
 class Chan():
-    def __init__(self, base, thread_path, board):
-        self.base = base
+    domain = None
+    base = None
+    thread_path = None
+
+    def __init__(self, board):
         self.board = board
-        self.thread_path = thread_path
+
+    @property
+    def id(self):
+        return '{}:{}'.format(self.domain, self.board)
 
     def _get_thread(self, id):
         """get thread data"""
@@ -64,15 +69,34 @@ class Chan():
         thread = self._get_thread(id)
         if thread is None:
             return str(id), None
-        return str(id), {
-            'posts': thread['posts'],
-            'last_modified': datetime.utcnow().timestamp()
+        return [self.parse_post(p) for p in thread['posts']]
+
+    def parse_post(self, post):
+        if 'tim' in post:
+            attachments = [self.attach_fmt.format(self.board, post['tim'], post['ext'])]
+        else:
+            attachments = []
+        return {
+            'lid': post['no'],
+            'author': post.get('id'),
+            'attachments': attachments,
+            'context': post.get('com'),
+            'created_at': post['time'],
+            'url': self.permalink_fmt.format(self.board, post['resto'], post['no'])
         }
 
 
-def four(board):
-    return Chan('https://api.4chan.org', 'thread', board)
+class FourChan(Chan):
+    domain = '4chan.org'
+    base = 'https://api.4chan.org'
+    thread_path = 'thread'
+    attach_fmt = 'http://i.4cdn.org/{}/{}{}'
+    permalink_fmt = 'http://boards.4chan.org/{}/thread/{}#p{}'
 
 
-def eight(board):
-    return Chan('https://8ch.net', 'res', board)
+class EightChan(Chan):
+    domain = '8ch.net'
+    base = 'https://8ch.net'
+    thread_path = 'res'
+    attach_fmt = 'https://8ch.pl/{}/src/{}{}'
+    permalink_fmt = 'https://8ch.pl/{}/res/{}.html#q{}'
