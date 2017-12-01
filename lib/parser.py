@@ -2,14 +2,16 @@ import re
 import requests
 from dateutil import parser
 
+# consider gifs images, but we don't handle them properly atm
 IMG_RE = re.compile(r'\.(jpg|jpeg|gif|png)')
-URL_RE = re.compile(r'(http[s]?:)?\/(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
+URL_RE = re.compile(r'(https?:\/)?(\/[\w\.\-]+)+\/?')
 
 
 def image_urls(content):
     """extract urls, relative or absolute,
     that look like image urls"""
-    return [url for url in URL_RE.findall(content) if is_image(url)]
+    urls = [url.group(0) for url in URL_RE.finditer(content)]
+    return [url for url in urls if is_image(url)]
 
 
 def query_image(url):
@@ -38,5 +40,3 @@ def is_image(url):
     """
     last = url.rsplit('/', 1)[-1]
     return IMG_RE.search(last) is not None
-
-
