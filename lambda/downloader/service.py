@@ -1,6 +1,7 @@
 import boto3
-from lib.image import image_hash, download_image, downscale_image
+from lib.util import parse_sns_event
 from lib.models import Image, ImageUsage, Session
+from lib.image import image_hash, download_image, downscale_image
 
 BUCKET = 'vizlab-imgs'
 DOWN_SIZE = (800, 800)
@@ -16,9 +17,9 @@ def handler(event, context):
     4. downscales image and saves to s3
     5. associates the image to a context
     """
-
     session = Session()
     s3 = boto3.client('s3')
+    event = parse_sns_event(event)
 
     # dowload the image
     # and compute the image hash from the original.

@@ -21,9 +21,7 @@ def handler(event, context):
         client.publish(
             TargetArn=arn,
             Message=json.dumps({
-                'default': json.dumps({
-                    'source_id': source.id
-                })
+                'source_id': source.id
             }),
             MessageStructure='json'
         )

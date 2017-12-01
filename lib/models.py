@@ -1,10 +1,11 @@
 import os
 from datetime import datetime
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine, Table, Column, DateTime, TIMESTAMP, Integer, String, ForeignKey, relationship
+from sqlalchemy import create_engine, Table, Column, DateTime, TIMESTAMP, Integer, String, ForeignKey
 
-engine = create_engine(os.environ['DATABASE_URI'])
+DEFAULT = 'postgresql://canary_user:password@localhost:5432/canary_dev'
+engine = create_engine(os.environ.get('DATABASE_URI', DEFAULT))
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
 
@@ -42,7 +43,7 @@ class ImageUsage(Base):
     context_id = Column(Integer, ForeignKey('contexts.id'))
 
 
-class Context():
+class Context(Base):
     __tablename__ = 'contexts'
 
     id = Column(Integer, primary_key=True)
@@ -60,14 +61,14 @@ class Tag(Base):
     __tablename__ = 'tags'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    name = Column(String, unique=True)
 
 
 class Source(Base):
     __tablename__ = 'sources'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    name = Column(String, unique=True)
     contexts = relationship('Context', backref='source')
 
 

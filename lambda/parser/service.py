@@ -3,6 +3,7 @@ import json
 import boto3
 from lib.parser import image_urls
 from lib.models import Context, Session
+from lib.util import parse_sns_event
 
 
 def handler(event, context):
@@ -17,6 +18,7 @@ def handler(event, context):
     client = boto3.client('sns')
     arn = os.environ['sns_arn']
 
+    event = parse_sns_event(event)
     post = event.get('post')
     source_id = event.get('source_id')
 
