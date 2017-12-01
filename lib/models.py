@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine, Table, Column, DateTime, Integer, String, ForeignKey, relationship
+from sqlalchemy import create_engine, Table, Column, DateTime, TIMESTAMP, Integer, String, ForeignKey, relationship
 
 engine = create_engine(os.environ['DATABASE_URI'])
 Base = declarative_base()
@@ -26,6 +26,12 @@ class Image(Base):
     tags = relationship('Tag', secondary=images_tags, backref='images')
     usages = relationship('ImageUsage', backref='image')
 
+    # additional metadata
+    height = Column(Integer)
+    width = Column(Integer)
+    format = Column(String)
+    mode = Column(String)
+
 
 class ImageUsage(Base):
     __tablename__ = 'image_usages'
@@ -39,11 +45,12 @@ class ImageUsage(Base):
 class Context():
     __tablename__ = 'contexts'
 
+    id = Column(Integer, primary_key=True)
     lid = Column(String)
     url = Column(String)
     author = Column(String)
     content = Column(String)
-    timestamp = Column(DateTime)
+    timestamp = Column(TIMESTAMP)
     created_at = Column(DateTime, default=datetime.utcnow())
     source_id = Column(Integer, ForeignKey('sources.id'))
     usages = relationship('ImageUsage', backref='context')

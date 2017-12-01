@@ -44,25 +44,17 @@ class Chan():
         url = '{}/{}/threads.json'.format(self.base, self.board)
         return _request(url)
 
-    def threads_to_update(self, threads):
+    def thread_ids(self):
         """compute which threads need to update,
         given an existing set of threads"""
         thread_meta_pages = self.query_threads()
         thread_meta = chain.from_iterable([p['threads'] for p in thread_meta_pages])
-        to_update = []
-        for meta in thread_meta:
-            id = meta['no']
-            last_modified = meta['last_modified']
+        ids = [meta['no'] for meta in thread_meta]
+        return ids
 
-            # str because keys become strings in json
-            if str(id) not in threads:
-                to_update.append((id, last_modified))
-            else:
-                thread = threads[str(id)]
-                if 'last_modified' not in thread or last_modified > thread['last_modified']:
-                    to_update.append((id, last_modified))
-        return to_update
-
+    def get_posts(self):
+        posts = [self.get_thread(id) for id in self.thread_ids()]
+        return list(chain.from_iterable(posts))
 
     def get_thread(self, id):
         """fetch thread details"""
