@@ -18,10 +18,16 @@ def handler(event, context):
     arn = os.environ['sns_arn']
     for name in SOURCES:
         source = session.query(Source).filter(Source.name==name).first()
-        client.publish(
-            TargetArn=arn,
-            Message=json.dumps({
-                'source_id': source.id
-            }),
-            MessageStructure='json'
-        )
+        site = source.api()
+        thread_ids = site.get_thread_ids()
+        for id in thread_ids:
+            client.publish(
+                TargetArn=arn,
+                Message=json.dumps({
+                    'source': name,
+                    'source_id': source.id,
+                    'thread_id': id
+                }),
+                MessageStructure='json'
+            )
+    session.close()

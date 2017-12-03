@@ -12,6 +12,10 @@ def image_hash(img, hash_size):
     return imagehash.dhash(img, hash_size=hash_size)
 
 
+def image_hash_from_hex(hex, hash_size):
+    return imagehash.hex_to_hash(hex, hash_size=hash_size)
+
+
 def download_image(url):
     """downloads a remote image to a PIL Image"""
     buffer = tempfile.SpooledTemporaryFile(max_size=1e9)
@@ -32,7 +36,7 @@ def downscale_image(img, size, quality):
     img = resize_to_limit(img, size)
     img = img.convert('RGB')
     data = io.BytesIO()
-    img.save(data, format='jpg', quality=quality)
+    img.save(data, format='JPEG', quality=quality)
     data.seek(0)
     return data
 

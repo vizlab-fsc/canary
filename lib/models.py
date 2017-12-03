@@ -2,7 +2,8 @@ import os
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine, Table, Column, DateTime, TIMESTAMP, Integer, String, ForeignKey
+from sqlalchemy import create_engine, Table, Column, DateTime, Integer, String, ForeignKey
+from .domains import domain_for_name
 
 DEFAULT = 'postgresql://canary_user:password@localhost:5432/canary_dev'
 engine = create_engine(os.environ.get('DATABASE_URI', DEFAULT))
@@ -51,10 +52,13 @@ class Context(Base):
     url = Column(String)
     author = Column(String)
     content = Column(String)
-    timestamp = Column(TIMESTAMP)
-    created_at = Column(DateTime, default=datetime.utcnow())
+    timestamp = Column(DateTime)
     source_id = Column(Integer, ForeignKey('sources.id'))
     usages = relationship('ImageUsage', backref='context')
+
+    # when this record was created
+    # (not when the original post was created)
+    created_at = Column(DateTime, default=datetime.utcnow())
 
 
 class Tag(Base):
@@ -70,6 +74,9 @@ class Source(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
     contexts = relationship('Context', backref='source')
+
+    def api(self):
+        return domain_for_name(self.name)
 
 
 Base.metadata.create_all(engine)

@@ -1,11 +1,11 @@
+import os
 import boto3
 from lib.util import parse_sns_event
 from lib.models import Image, ImageUsage, Session
 from lib.image import image_hash, download_image, downscale_image
 
-BUCKET = 'vizlab-imgs'
 DOWN_SIZE = (800, 800)
-HASH_SIZE = 128 # must be a power of 2
+HASH_SIZE = 16 # must be a power of 2. 16 for more accuracy, but slower
 QUALITY = 80
 
 
@@ -18,7 +18,9 @@ def handler(event, context):
     5. associates the image to a context
     """
     session = Session()
-    s3 = boto3.client('s3')
+    s3 = boto3.resource('s3')
+    bucket_name = os.environ['s3_bucket']
+    bucket = s3.Bucket(bucket_name)
     event = parse_sns_event(event)
 
     # dowload the image
@@ -26,7 +28,7 @@ def handler(event, context):
     # we don't save the original because it will be too expensive.
     url = event.get('url')
     img = download_image(url)
-    hash = image_hash(img, HASH_SIZE)
+    hash = str(image_hash(img, HASH_SIZE))
     key = hash
 
     meta = {
@@ -37,23 +39,23 @@ def handler(event, context):
     }
 
     # check if image already is saved
-    q = session.query(Image).filter(
+    image = session.query(Image).filter(
         Image.hash==hash,
         Image.url==url
-    )
-    exists = session.query(q.exists()).scalar()
-    if not exists:
+    ).first()
+    if image is None:
+        # save the downscaled image
+        out = downscale_image(img, DOWN_SIZE, QUALITY)
+        bucket.put_object(Key=key, Body=out, ACL='public-read')
+
         # create new image
         image = Image(url=url, key=key, hash=hash, **meta)
         session.add(image)
         session.commit()
-
-        # save the downscaled image
-        out = downscale_image(img, DOWN_SIZE, QUALITY)
-        s3.Bucket(BUCKET).put(key=key, data=out, acl='private')
 
     # associate the image with the context
     context_id = event.get('context_id')
     usage = ImageUsage(image=image, context_id=context_id)
     session.add(usage)
     session.commit()
+    session.close()

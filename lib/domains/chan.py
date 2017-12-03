@@ -6,6 +6,7 @@ reference <https://github.com/4chan/4chan-API/blob/master/README.md>
 import logging
 import requests
 from itertools import chain
+from datetime import datetime
 from json import JSONDecodeError
 from lib import config
 
@@ -44,23 +45,16 @@ class Chan():
         url = '{}/{}/threads.json'.format(self.base, self.board)
         return _request(url)
 
-    def thread_ids(self):
-        """compute which threads need to update,
-        given an existing set of threads"""
+    def get_thread_ids(self):
+        """get recent thread ids"""
         thread_meta_pages = self.query_threads()
         thread_meta = chain.from_iterable([p['threads'] for p in thread_meta_pages])
         ids = [meta['no'] for meta in thread_meta]
         return ids
 
-    def get_posts(self):
-        posts = [self.get_thread(id) for id in self.thread_ids()]
-        return list(chain.from_iterable(posts))
-
-    def get_thread(self, id):
+    def get_posts(self, id):
         """fetch thread details"""
         thread = self._get_thread(id)
-        if thread is None:
-            return str(id), None
         return [self.parse_post(p) for p in thread['posts']]
 
     def parse_post(self, post):
@@ -69,11 +63,11 @@ class Chan():
         else:
             attachments = []
         return {
-            'lid': post['no'],
+            'lid': str(post['no']),
             'author': post.get('id'),
             'attachments': attachments,
-            'context': post.get('com'),
-            'created_at': post['time'],
+            'content': post.get('com', ''),
+            'timestamp': datetime.fromtimestamp(post['time']).isoformat(),
             'url': self.permalink_fmt.format(self.board, post['resto'], post['no'])
         }
 

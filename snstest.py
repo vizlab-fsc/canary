@@ -1,8 +1,25 @@
 import os
 import json
+import time
 import boto3
 import importlib.util
-from moto import mock_sns, mock_sqs
+import requests_cache
+from tqdm import tqdm
+from lib.models import Session, Image, ImageUsage, Context
+from moto import mock_sns, mock_sqs, mock_s3
+from concurrent.futures import ThreadPoolExecutor
+
+
+def parallel(fn, items, n_jobs=4):
+    with ThreadPoolExecutor(max_workers=n_jobs) as executor:
+        return [f for f in executor.map(fn, items)]
+        # kwargs = {
+        #     'total': len(items),
+        #     'unit': 'i',
+        #     'unit_scale': True,
+        #     'leave': True
+        # }
+
 
 
 def import_function(name):
@@ -25,26 +42,73 @@ def create_queue(client, name):
     queue_url = client.get_queue_url(QueueName=name)['QueueUrl']
     queue_attrs = client.get_queue_attributes(QueueUrl=queue_url,
                                                     AttributeNames=['All'])['Attributes']
-    return queue_attrs['QueueArn'], queue_url
+    queue_arn = queue_attrs['QueueArn']
+    return queue_url, queue_arn
+
 
 
 def get_messages(queue):
-    messages = queue.receive_messages()
-    return [json.loads(m.body) for m in messages]
+    """consume all available messages from the queue.
+    we can only get 10 at a time."""
+    msgs = None
+    while msgs is None or msgs:
+        msgs = queue.receive_messages(MaxNumberOfMessages=10)
+        receipts = [{
+            'Id': m.message_id,
+            'ReceiptHandle': m.receipt_handle
+        } for m in msgs]
+        yield [sqs_as_sns(json.loads(m.body)) for m in msgs], receipts
 
 
-def get_sns_events(queue):
+def process_queue(handler, queue):
+    runtimes = []
+    n_messages = int(queue.attributes['ApproximateNumberOfMessages'])
+    print('messages:', n_messages)
+    with tqdm(total=n_messages) as pbar:
+        for events, receipts in get_messages(queue):
+            runtimes.extend(parallel(lambda ev: time_fn(handler, ev, {}), events))
+            queue.delete_messages(Entries=receipts)
+            pbar.update(len(events))
+    # this is going to imprecise with cached responses...
+    print('took {:.2f}ms on avg'.format(sum(runtimes)/len(runtimes)))
+
+
+def sqs_as_sns(message):
     # <http://docs.aws.amazon.com/lambda/latest/dg/eventsources.html#eventsources-sns>
-    return [{
+    return {
         'Records': [{
             'Sns': message
         }]
-    } for message in get_messages(queue)]
+    }
 
 
+def time_fn(fn, *args, **kwargs):
+    """times a function execution in ms"""
+    start = time.time()
+    fn(*args, **kwargs)
+    return (time.time() - start) * 1000
+
+
+# <https://github.com/spulec/moto/issues/1026>
+@mock_s3
 @mock_sns
 @mock_sqs
 def test():
+    start = time.time()
+
+    # so we don't constantly hit the sites
+    requests_cache.install_cache('/tmp/vizlab.cache')
+
+    # clean up test data
+    session = Session()
+    session.query(ImageUsage).delete()
+    session.query(Image).delete()
+    session.query(Context).delete()
+    session.commit()
+    assert session.query(Image).count() == 0
+    assert session.query(ImageUsage).count() == 0
+    assert session.query(Context).count() == 0
+
     # load lambda functions
     handlers = {
         name: import_function(name)
@@ -58,30 +122,55 @@ def test():
         for name in ['arbiter', 'scraper', 'parser']
     }
 
-    sqs_client = boto3.client('sqs')
-    queue_arn, queue_url = create_queue(sqs_client, 'test-queue')
-
     sqs = boto3.resource('sqs')
-    queue = sqs.Queue(queue_url)
+    sqs_client = boto3.client('sqs')
 
-    for name, arn in topics.items():
+    queues = {}
+    for name, topic_arn in topics.items():
+        queue_url, queue_arn = create_queue(sqs_client, name)
+        queue = sqs.Queue(queue_url)
         sns_client.subscribe(
-            TopicArn=arn,
+            TopicArn=topic_arn,
             Protocol='sqs',
             Endpoint=queue_arn)
+        queues[name] = queue
 
-    print('arbiter')
+    # setup mock s3
+    bucket_name = 'vizlab-imgs-test'
+    s3 = boto3.resource('s3')
+    s3.create_bucket(Bucket=bucket_name)
+    bucket = s3.Bucket(bucket_name)
+    os.environ['s3_bucket'] = bucket_name
+
+    print('arbiter...')
     os.environ['sns_arn'] = topics['arbiter']
     handlers['arbiter']({}, {})
-    events = get_sns_events(queue)
-    queue.purge()
 
-    for event in events:
-        handlers['scraper'](event, {})
+    print('scraper...')
+    os.environ['sns_arn'] = topics['scraper']
+    process_queue(handlers['scraper'], queues['arbiter'])
 
-    events = get_sns_events(queue)
-    print(events)
-    queue.purge()
+    print('parser...')
+    os.environ['sns_arn'] = topics['parser']
+    process_queue(handlers['parser'], queues['scraper'])
+    assert session.query(Context).count() > 0
 
+    print('downloader...')
+    process_queue(handlers['downloader'], queues['parser'])
+    assert session.query(Image).count() > 0
+    assert session.query(ImageUsage).count() > 0
 
-test()
+    # TODO check mock s3
+    images = session.query(Image).all()
+    keys = [obj.key for obj in bucket.objects.all()]
+    print(keys)
+    assert set(keys) == set([img.hash for img in images])
+
+    print('images:', session.query(Image).count())
+    print('usages:', session.query(ImageUsage).count())
+    print('contexts:', session.query(Context).count())
+    print('done')
+    print('took {}s', format(time.time() - start))
+
+if __name__ == '__main__':
+    test()

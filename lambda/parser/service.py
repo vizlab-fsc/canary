@@ -25,7 +25,7 @@ def handler(event, context):
     # get images, if any
     # if none, don't save the post
     images = post.pop('attachments')
-    images.extend(image_urls(post))
+    images.extend(image_urls(post['content']))
     if not images:
         return
 
@@ -45,10 +45,8 @@ def handler(event, context):
             client.publish(
                 TargetArn=arn,
                 Message=json.dumps({
-                    'default': json.dumps({
-                        'context_id': context.id,
-                        'url': img
-                    })
+                    'context_id': context.id,
+                    'url': img
                 }),
                 MessageStructure='json'
             )
