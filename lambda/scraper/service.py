@@ -3,6 +3,7 @@ import json
 import boto3
 from lib.util import parse_sns_event
 from lib.domains import domain_for_name
+from lib.memory import record_seen, filter_seen
 
 
 def handler(event, context):
@@ -20,7 +21,7 @@ def handler(event, context):
     source = event.get('source')
 
     site = domain_for_name(source)
-    posts = site.get_posts(thread_id)
+    posts = list(filter_seen(source, site.get_posts(thread_id)))
     for post in posts:
         client.publish(
             TargetArn=arn,
@@ -30,3 +31,4 @@ def handler(event, context):
             }),
             MessageStructure='json'
         )
+    record_seen(source, posts)

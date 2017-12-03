@@ -1,6 +1,7 @@
 import os
 import json
 import boto3
+from lib.memory import prune
 from lib.models import Source, Session
 
 # TODO move this to env var?
@@ -30,4 +31,5 @@ def handler(event, context):
                 }),
                 MessageStructure='json'
             )
+        prune(name)
     session.close()
