@@ -3,9 +3,12 @@ import requests
 from dateutil import parser
 
 # consider gifs images, but we don't handle them properly atm
-IMG_RE = re.compile(r'\.(jpg|jpeg|gif|png)')
-URL_RE = re.compile(r'(https?:\/)?(\/[\w\.\-]+)+\/?')
+OK_EXTS = ['jpg', 'jpeg', 'gif', 'png']
+IMG_RE = re.compile(r'\.({})'.format('|'.join(OK_EXTS)))
+URL_RE = re.compile(r'https?:\/(\/[\w\.\-]+)+\/?')
 
+# this also captures relative urls
+# URL_RE = re.compile(r'(https?:\/)?(\/[\w\.\-]+)+\/?')
 
 def image_urls(content):
     """extract urls, relative or absolute,

@@ -1,31 +1,24 @@
 import os
 import json
 import boto3
-from lib.parser import image_urls
+from lib.util import parse_sns_event
 from lib.models import Context, Session
 
 
 def handler(event, context):
     """
-    1. takes in posts for a source
-    2. extracts image urls
-    3. saves new posts to db
-    4. sends messages with the image urls for other
-    functions to process
+    1. takes in a post
+    2. saves new post to db
+    3. sends image urls to other functions to process
     """
     session = Session()
     client = boto3.client('sns')
     arn = os.environ['sns_arn']
 
+    event = parse_sns_event(event)
     post = event.get('post')
     source_id = event.get('source_id')
-
-    # get images, if any
-    # if none, don't save the post
-    images = post.pop('attachments')
-    images.extend(image_urls(post))
-    if not images:
-        return
+    images = post.pop('images')
 
     # check if post already is saved
     q = session.query(Context).filter(
@@ -43,11 +36,14 @@ def handler(event, context):
             client.publish(
                 TargetArn=arn,
                 Message=json.dumps({
-                    'default': json.dumps({
-                        'context_id': context.id,
-                        'url': img
-                    })
+                    'context_id': context.id,
+                    'url': img
                 }),
                 MessageStructure='json'
             )
     session.close()
+
+    # TODO by this point posts are already recorded as seen
+    # need some assurance that the post won't get lost b/w functions
+    # this should probably send to a queue instead of directly invoking a lambda
+    # function

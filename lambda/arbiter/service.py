@@ -1,6 +1,7 @@
 import os
 import json
 import boto3
+from lib.memory import prune
 from lib.models import Source, Session
 
 # TODO move this to env var?
@@ -18,12 +19,17 @@ def handler(event, context):
     arn = os.environ['sns_arn']
     for name in SOURCES:
         source = session.query(Source).filter(Source.name==name).first()
-        client.publish(
-            TargetArn=arn,
-            Message=json.dumps({
-                'default': json.dumps({
-                    'source_id': source.id
-                })
-            }),
-            MessageStructure='json'
-        )
+        site = source.api()
+        thread_ids = site.get_thread_ids()
+        for id in thread_ids:
+            client.publish(
+                TargetArn=arn,
+                Message=json.dumps({
+                    'source': name,
+                    'source_id': source.id,
+                    'thread_id': id
+                }),
+                MessageStructure='json'
+            )
+        prune(name)
+    session.close()
