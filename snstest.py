@@ -5,6 +5,7 @@ import boto3
 import importlib.util
 import requests_cache
 from tqdm import tqdm
+from lib.memory import r
 from lib.models import Session, Image, ImageUsage, Context
 from moto import mock_sns, mock_sqs, mock_s3
 from concurrent.futures import ThreadPoolExecutor
@@ -13,13 +14,6 @@ from concurrent.futures import ThreadPoolExecutor
 def parallel(fn, items, n_jobs=4):
     with ThreadPoolExecutor(max_workers=n_jobs) as executor:
         return [f for f in executor.map(fn, items)]
-        # kwargs = {
-        #     'total': len(items),
-        #     'unit': 'i',
-        #     'unit_scale': True,
-        #     'leave': True
-        # }
-
 
 
 def import_function(name):
@@ -94,10 +88,11 @@ def time_fn(fn, *args, **kwargs):
 @mock_sns
 @mock_sqs
 def test():
-    start = time.time()
-
     # so we don't constantly hit the sites
     requests_cache.install_cache('/tmp/vizlab.cache')
+
+    # reset redis (optional)
+    r.flushdb()
 
     # clean up test data
     session = Session()
@@ -142,6 +137,8 @@ def test():
     bucket = s3.Bucket(bucket_name)
     os.environ['s3_bucket'] = bucket_name
 
+    start = time.time()
+
     print('arbiter...')
     os.environ['sns_arn'] = topics['arbiter']
     handlers['arbiter']({}, {})
@@ -163,14 +160,14 @@ def test():
     # TODO check mock s3
     images = session.query(Image).all()
     keys = [obj.key for obj in bucket.objects.all()]
-    print(keys)
     assert set(keys) == set([img.hash for img in images])
 
     print('images:', session.query(Image).count())
     print('usages:', session.query(ImageUsage).count())
     print('contexts:', session.query(Context).count())
     print('done')
-    print('took {}s', format(time.time() - start))
+    print('took {}s'.format(time.time() - start))
+
 
 if __name__ == '__main__':
     test()

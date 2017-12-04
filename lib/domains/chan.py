@@ -59,7 +59,7 @@ class Chan():
 
     def parse_post(self, post):
         if 'tim' in post:
-            attachments = [self.attach_fmt.format(self.board, post['tim'], post['ext'])]
+            attachments = [self.attach_fmt.format(board=self.board, tim=post['tim'], ext=post['ext'])]
         else:
             attachments = []
         return {
@@ -76,7 +76,7 @@ class FourChan(Chan):
     domain = '4chan.org'
     base = 'https://api.4chan.org'
     thread_path = 'thread'
-    attach_fmt = 'http://i.4cdn.org/{}/{}{}'
+    attach_fmt = 'http://i.4cdn.org/{board}/{tim}{ext}'
     permalink_fmt = 'http://boards.4chan.org/{}/thread/{}#p{}'
 
 
@@ -84,5 +84,5 @@ class EightChan(Chan):
     domain = '8ch.net'
     base = 'https://8ch.net'
     thread_path = 'res'
-    attach_fmt = 'https://8ch.pl/{}/src/{}{}'
+    attach_fmt = 'https://media.8ch.net/file_store/{tim}{ext}'
     permalink_fmt = 'https://8ch.pl/{}/res/{}.html#q{}'

@@ -14,6 +14,17 @@ def record_seen(domain, posts):
         r.zadd(domain, **kwargs)
 
 
+def record_downloaded(url):
+    """record which images
+    have been downloaded"""
+    ts = datetime.utcnow().timestamp()
+    r.zadd('images', **{url: ts})
+
+
+def already_downloaded(url):
+    return r.zscore('images', url) is not None
+
+
 def filter_seen(domain, posts):
     """filter out posts that
     have already been seen"""

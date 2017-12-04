@@ -24,7 +24,11 @@ def download_image(url):
         for chunk in res:
             buffer.write(chunk)
         buffer.seek(0)
-        return Image.open(io.BytesIO(buffer.read()))
+        try:
+            return Image.open(io.BytesIO(buffer.read()))
+        except OSError:
+            print(url)
+            raise
     else:
         res.raise_for_status()
 
