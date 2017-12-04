@@ -65,6 +65,7 @@ def process_queue(handler, queue):
             pbar.update(len(events))
     # this is going to imprecise with cached responses...
     print('took {:.2f}ms on avg'.format(sum(runtimes)/len(runtimes)))
+    return runtimes
 
 
 def sqs_as_sns(message):
@@ -93,6 +94,8 @@ def test():
 
     # reset redis (optional)
     r.flushdb()
+
+    runtimes = {}
 
     # clean up test data
     session = Session()
@@ -145,15 +148,15 @@ def test():
 
     print('scraper...')
     os.environ['sns_arn'] = topics['scraper']
-    process_queue(handlers['scraper'], queues['arbiter'])
+    runtimes['scraper'] = process_queue(handlers['scraper'], queues['arbiter'])
 
     print('parser...')
     os.environ['sns_arn'] = topics['parser']
-    process_queue(handlers['parser'], queues['scraper'])
+    runtimes['parser'] = process_queue(handlers['parser'], queues['scraper'])
     assert session.query(Context).count() > 0
 
     print('downloader...')
-    process_queue(handlers['downloader'], queues['parser'])
+    runtimes['downloader'] = process_queue(handlers['downloader'], queues['parser'])
     assert session.query(Image).count() > 0
     assert session.query(ImageUsage).count() > 0
 
@@ -167,6 +170,11 @@ def test():
     print('contexts:', session.query(Context).count())
     print('done')
     print('took {}s'.format(time.time() - start))
+
+    for k, rts in runtimes.items():
+        print(k)
+        print('n:', len(rts))
+        print('sum:', sum(rts))
 
 
 if __name__ == '__main__':

@@ -55,6 +55,8 @@ class Chan():
     def get_posts(self, id):
         """fetch thread details"""
         thread = self._get_thread(id)
+        if thread is None:
+            return []
         return [self.parse_post(p) for p in thread['posts']]
 
     def parse_post(self, post):
