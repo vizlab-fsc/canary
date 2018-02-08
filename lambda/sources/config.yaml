@@ -1,20 +1,20 @@
 region: us-east-1
 
-function_name: downloader
+function_name: sources
 handler: service.handler
-description: image downloader
+description: interface to manage sources
 runtime: python3.6
 role: lambda_basic_execution
-memory_size: 128
 timeout: 15
+memory_size: 128
 
 environment_variables:
-  S3_BUCKET: ${VIZLAB_S3_BUCKET}
   REDIS_URI: ${VIZLAB_REDIS_URI}
   DATABASE_URI: ${VIZLAB_DATABASE_URI}
+  SOURCES: ${VIZLAB_SOURCES}
 
 build:
-  source_directories: lib, psycopg2, PIL, numpy
+  source_directories: lib, psycopg2
 
 bucket_name: 'vizlab-lambda'
-s3_key_prefix: 'downloader/'
+s3_key_prefix: 'sources/'

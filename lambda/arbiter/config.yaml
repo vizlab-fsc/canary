@@ -1,16 +1,20 @@
 region: us-east-1
 
-function_name: scraper_arbiter
+function_name: arbiter
 handler: service.handler
 description: pulls threads for scrapers to process
 runtime: python3.6
 role: lambda_basic_execution
-timeout: 15
+timeout: 60
 memory_size: 128
 
 environment_variables:
-    sns_arn: arn:aws:sns:us-east-1:109671671046:scrape
-    s3_bucket: vizlab-imgs
+  REDIS_URI: ${VIZLAB_REDIS_URI}
+  SNS_ARN: ${VIZLAB_ARBITER_SNS_ARN}
+  DATABASE_URI: ${VIZLAB_DATABASE_URI}
 
 build:
-  source_directories: lib
+  source_directories: lib, psycopg2
+
+bucket_name: 'vizlab-lambda'
+s3_key_prefix: 'arbiter/'

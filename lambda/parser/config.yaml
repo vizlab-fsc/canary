@@ -8,6 +8,12 @@ role: lambda_basic_execution
 memory_size: 128
 timeout: 15
 
-build:
-  source_directories: lib
+environment_variables:
+  SNS_ARN: ${VIZLAB_PARSER_SNS_ARN}
+  DATABASE_URI: ${VIZLAB_DATABASE_URI}
 
+build:
+  source_directories: lib, psycopg2
+
+bucket_name: 'vizlab-lambda'
+s3_key_prefix: 'parser/'

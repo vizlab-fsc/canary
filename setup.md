@@ -24,6 +24,7 @@ Using [`python-lambda`](https://github.com/nficano/python-lambda)
         - `bucket_name: <YOUR BUCKET NAME>`
         - `s3_key_prefix: <LAMBDA NAME>/`
     - Then do `lambda deploy_s3 --use-requirements`
+- In the AWS Lambda dashboard for your function, make sure to place it in an appropriate subnet (a private one, see below) and include the security groups for your VPC, and one to communicate externally too
 - See your [Lambda service here](https://console.aws.amazon.com/lambda/home?region=us-east-1#)
 
 If you want your lambda function to access the internet, you also need:

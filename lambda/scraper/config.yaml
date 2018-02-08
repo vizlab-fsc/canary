@@ -2,12 +2,18 @@ region: us-east-1
 
 function_name: scraper
 handler: service.handler
-description: generic scraper
+description: general-purpose scraper
 runtime: python3.6
 role: lambda_basic_execution
 memory_size: 128
 timeout: 15
 
+environment_variables:
+  SNS_ARN: ${VIZLAB_SCRAPER_SNS_ARN}
+  REDIS_URI: ${VIZLAB_REDIS_URI}
+
 build:
   source_directories: lib
 
+bucket_name: 'vizlab-lambda'
+s3_key_prefix: 'scraper/'
