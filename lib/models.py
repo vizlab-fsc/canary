@@ -6,7 +6,8 @@ from sqlalchemy import create_engine, Table, Column, DateTime, Integer, String, 
 from .domains import domain_for_name
 
 DEFAULT = 'postgresql://canary_user:password@localhost:5432/canary_dev'
-engine = create_engine(os.environ.get('DATABASE_URI', DEFAULT))
+URI =  os.environ.get('DATABASE_URI', DEFAULT)
+engine = create_engine(URI)
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
 

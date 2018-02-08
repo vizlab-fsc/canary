@@ -6,7 +6,6 @@ reference <https://github.com/4chan/4chan-API/blob/master/README.md>
 import logging
 import requests
 from itertools import chain
-from datetime import datetime
 from json import JSONDecodeError
 from lib import config
 
@@ -14,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def _request(url):
+    logger.info('Requesting: {}'.format(url))
     res = requests.get(url, headers={'User-Agent': config.USER_AGENT})
     try:
         return res.json()
@@ -69,7 +69,7 @@ class Chan():
             'author': post.get('id'),
             'attachments': attachments,
             'content': post.get('com', ''),
-            'timestamp': datetime.fromtimestamp(post['time']).isoformat(),
+            'timestamp': post['time'],
             'url': self.permalink_fmt.format(self.board, post['resto'], post['no'])
         }
 

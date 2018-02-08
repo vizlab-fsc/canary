@@ -1,19 +1,19 @@
 import io
 import requests
 import tempfile
-import imagehash
 from PIL import Image
+from .hash import dhash, hex_to_hash
 
 
 def image_hash(img, hash_size):
     """generate perceptual hash for image.
     uses whash, but other options are available:
     <https://github.com/JohannesBuchner/imagehash>"""
-    return imagehash.dhash(img, hash_size=hash_size)
+    return dhash(img, hash_size=hash_size)
 
 
 def image_hash_from_hex(hex, hash_size):
-    return imagehash.hex_to_hash(hex, hash_size=hash_size)
+    return hex_to_hash(hex, hash_size=hash_size)
 
 
 def download_image(url):
@@ -40,7 +40,7 @@ def downscale_image(img, size, quality):
     img = resize_to_limit(img, size)
     img = img.convert('RGB')
     data = io.BytesIO()
-    img.save(data, format='JPEG', quality=quality)
+    img.save(data, format='JPEG', quality=quality, subsampling=0)
     data.seek(0)
     return data
 

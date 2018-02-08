@@ -1,8 +1,13 @@
 import os
 import json
 import boto3
+import logging
+from datetime import datetime
 from lib.util import parse_sns_event
 from lib.models import Context, Session
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
@@ -13,12 +18,13 @@ def handler(event, context):
     """
     session = Session()
     client = boto3.client('sns')
-    arn = os.environ['sns_arn']
+    arn = os.environ['SNS_ARN']
 
     event = parse_sns_event(event)
     post = event.get('post')
     source_id = event.get('source_id')
     images = post.pop('images')
+    post['timestamp'] = datetime.utcfromtimestamp(post['timestamp'])
 
     # check if post already is saved
     q = session.query(Context).filter(
@@ -34,10 +40,12 @@ def handler(event, context):
         for img in images:
             # send out messages of post data for processing
             client.publish(
-                TargetArn=arn,
+                TopicArn=arn,
                 Message=json.dumps({
-                    'context_id': context.id,
-                    'url': img
+                    'default': json.dumps({
+                        'context_id': context.id,
+                        'url': img
+                    })
                 }),
                 MessageStructure='json'
             )

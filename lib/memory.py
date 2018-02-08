@@ -1,8 +1,9 @@
+import os
 import redis
 from datetime import datetime, timedelta
 
 EXPIRES = 2 # in days
-r = redis.StrictRedis() # TODO connection string
+r = redis.StrictRedis(os.environ['REDIS_URI'])
 
 
 def record_seen(domain, posts):

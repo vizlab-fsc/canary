@@ -16,7 +16,7 @@ def handler(event, context):
     """
     # session = Session()
     client = boto3.client('sns')
-    arn = os.environ['sns_arn']
+    arn = os.environ['SNS_ARN']
 
     event = parse_sns_event(event)
     thread_id = event.get('thread_id')
@@ -35,10 +35,12 @@ def handler(event, context):
 
         post['images'] = images
         client.publish(
-            TargetArn=arn,
+            TopicArn=arn,
             Message=json.dumps({
-                'source_id': source_id,
-                'post': post
+                'default': json.dumps({
+                    'source_id': source_id,
+                    'post': post
+                })
             }),
             MessageStructure='json'
         )

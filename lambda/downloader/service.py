@@ -12,7 +12,7 @@ logger.setLevel(logging.INFO)
 
 DOWN_SIZE = (800, 800)
 HASH_SIZE = 16 # must be a power of 2. 16 for more accuracy, but slower
-QUALITY = 80
+QUALITY = 90
 
 
 def handler(event, context):
@@ -25,7 +25,7 @@ def handler(event, context):
     """
     session = Session()
     s3 = boto3.resource('s3')
-    bucket_name = os.environ['s3_bucket']
+    bucket_name = os.environ['S3_BUCKET']
     bucket = s3.Bucket(bucket_name)
     event = parse_sns_event(event)
 
