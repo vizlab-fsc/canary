@@ -90,7 +90,7 @@ def time_fn(fn, *args, **kwargs):
 @mock_sqs
 def test():
     # so we don't constantly hit the sites
-    requests_cache.install_cache('/tmp/vizlab.cache')
+    # requests_cache.install_cache('/tmp/vizlab.cache')
 
     # reset redis (optional)
     r.flushdb()
@@ -138,20 +138,20 @@ def test():
     s3 = boto3.resource('s3')
     s3.create_bucket(Bucket=bucket_name)
     bucket = s3.Bucket(bucket_name)
-    os.environ['s3_bucket'] = bucket_name
+    os.environ['S3_BUCKET'] = bucket_name
 
     start = time.time()
 
     print('arbiter...')
-    os.environ['sns_arn'] = topics['arbiter']
+    os.environ['SNS_ARN'] = topics['arbiter']
     handlers['arbiter']({}, {})
 
     print('scraper...')
-    os.environ['sns_arn'] = topics['scraper']
+    os.environ['SNS_ARN'] = topics['scraper']
     runtimes['scraper'] = process_queue(handlers['scraper'], queues['arbiter'])
 
     print('parser...')
-    os.environ['sns_arn'] = topics['parser']
+    os.environ['SNS_ARN'] = topics['parser']
     runtimes['parser'] = process_queue(handlers['parser'], queues['scraper'])
     assert session.query(Context).count() > 0
 
@@ -175,6 +175,43 @@ def test():
         print(k)
         print('n:', len(rts))
         print('sum:', sum(rts))
+
+    print('sleeping...')
+    time.sleep(60*5)
+    print('====================================================')
+    print('======RUN TWO ======================================')
+    print('====================================================')
+
+    runtimes = {}
+
+    start = time.time()
+
+    print('arbiter...')
+    os.environ['SNS_ARN'] = topics['arbiter']
+    handlers['arbiter']({}, {})
+
+    print('scraper...')
+    os.environ['SNS_ARN'] = topics['scraper']
+    runtimes['scraper'] = process_queue(handlers['scraper'], queues['arbiter'])
+
+    print('parser...')
+    os.environ['SNS_ARN'] = topics['parser']
+    runtimes['parser'] = process_queue(handlers['parser'], queues['scraper'])
+
+    print('downloader...')
+    runtimes['downloader'] = process_queue(handlers['downloader'], queues['parser'])
+
+    print('images:', session.query(Image).count())
+    print('usages:', session.query(ImageUsage).count())
+    print('contexts:', session.query(Context).count())
+    print('done')
+    print('took {}s'.format(time.time() - start))
+
+    for k, rts in runtimes.items():
+        print(k)
+        print('n:', len(rts))
+        print('sum:', sum(rts))
+
 
 
 if __name__ == '__main__':
