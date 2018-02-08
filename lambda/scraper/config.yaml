@@ -17,3 +17,6 @@ build:
 
 bucket_name: 'vizlab-lambda'
 s3_key_prefix: 'scraper/'
+
+subnet_ids: [subnet-4f0f4860]
+security_group_ids: [sg-e26de795, sg-0f168278]
