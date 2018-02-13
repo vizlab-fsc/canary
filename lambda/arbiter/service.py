@@ -4,11 +4,32 @@ import boto3
 import logging
 from lib.memory import prune
 from lib.models import Source, Session
-logger = logging.getLogger()
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
-# TODO move this to env var?
-# or just iterate over all sources in DB?
-SOURCES = ['4chan:pol', '8chan:leftypol']
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+
+def process_source(client, arn, source):
+    logger.info(source.name)
+    site = source.api()
+    thread_ids = site.get_thread_ids()
+    for id in thread_ids:
+        message = {
+            'source': source.name,
+            'source_id': source.id,
+            'thread_id': id
+        }
+        client.publish(
+            TopicArn=arn,
+            Message=json.dumps({
+                'default': json.dumps(message)
+            }),
+            MessageStructure='json'
+        )
+    prune(source.name)
+    return source
 
 
 def handler(event, context):
@@ -19,23 +40,9 @@ def handler(event, context):
     session = Session()
     client = boto3.client('sns')
     arn = os.environ['SNS_ARN']
-    for name in SOURCES:
-        logger.info(name)
-        source = session.query(Source).filter(Source.name==name).first()
-        site = source.api()
-        thread_ids = site.get_thread_ids()
-        for id in thread_ids:
-            message = {
-                'source': name,
-                'source_id': source.id,
-                'thread_id': id
-            }
-            client.publish(
-                TopicArn=arn,
-                Message=json.dumps({
-                    'default': json.dumps(message)
-                }),
-                MessageStructure='json'
-            )
-        prune(name)
+    sources = session.query(Source).all()
+    fn = partial(process_source, client, arn)
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        for source in executor.map(fn, sources):
+            logger.info('done: {}'.format(source.name))
     session.close()
