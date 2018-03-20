@@ -33,7 +33,7 @@ def handler(event, context):
     )
     exists = session.query(q.exists()).scalar()
     if not exists:
-        context = Context(**post)
+        context = Context(source_id=source_id, **post)
         session.add(context)
         session.commit()
 
